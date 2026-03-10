@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcritor de Áudio</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #7c6af7;
+    --accent2: #f97b6b;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #5eead4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background blobs */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,106,247,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(249,123,107,0.10) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .logo-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 7vw, 52px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* API Key section */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+
+  .card-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-label span {
+    width: 18px; height: 18px;
+    background: var(--border);
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  .api-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  input[type="password"], input[type="text"] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .api-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .api-hint a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .api-hint a:hover { text-decoration: underline; }
+
+  /* Upload area */
+  .upload-area {
+    border: 1.5px dashed var(--border);
+    border-radius: 16px;
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--accent);
+    background: rgba(124,106,247,0.04);
+  }
+
+  .upload-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .upload-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .upload-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  #fileInput { display: none; }
+
+  /* File list */
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    animation: fadeUp 0.3s ease both;
+  }
+  .file-icon { font-size: 20px; }
+  .file-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .file-size { color: var(--muted); font-size: 12px; }
+  .file-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+  }
+  .file-remove:hover { color: var(--accent2); background: rgba(249,123,107,0.1); }
+
+  /* Button */
+  .btn-transcribe {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), #9b6af7);
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-transcribe:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(124,106,247,0.35);
+  }
+  .btn-transcribe:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-transcribe::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(255,255,255,0.08), transparent);
+  }
+
+  /* Progress */
+  .progress-wrap {
+    margin-top: 14px;
+    display: none;
+  }
+  .progress-wrap.show { display: block; }
+
+  .progress-bar-bg {
+    background: var(--border);
+    border-radius: 100px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Results */
+  .results {
+    margin-top: 8px;
+    display: none;
+  }
+  .results.show { display: block; }
+
+  .result-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .result-filename {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-copy, .btn-dl {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-copy {
+    background: var(--border);
+    color: var(--text);
+  }
+  .btn-copy:hover { background: var(--accent); color: white; }
+  .btn-dl {
+    background: rgba(94,234,212,0.1);
+    color: var(--success);
+    border: 1px solid rgba(94,234,212,0.2);
+  }
+  .btn-dl:hover { background: rgba(94,234,212,0.2); }
+
+  .result-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .error-item {
+    background: rgba(249,123,107,0.07);
+    border: 1px solid rgba(249,123,107,0.2);
+    border-radius: 14px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Copied toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--success);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-dot"></span>
+      Groq Whisper · Gratuito
+    </div>
+    <h1>Transcritor<br>de Áudio</h1>
+    <p class="subtitle">Envie seus áudios e receba a transcrição em segundos. Funciona com WhatsApp, gravações e mais.</p>
+  </div>
+
+  <!-- Step 1: API Key -->
+  <div class="card" id="step1">
+    <div class="card-label"><span>1</span> Chave da API OpenAI</div>
+    <div class="api-row">
+      <input type="password" id="apiKey" placeholder="gsk_..." autocomplete="off" />
+    </div>
+    <p class="api-hint">
+      100% gratuito! Crie sua chave em <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (sem cartão).<br>
+      Sua chave fica salva só no seu navegador.
+    </p>
+  </div>
+
+  <!-- Step 2: Upload -->
+  <div class="card" id="step2">
+    <div class="card-label"><span>2</span> Seus áudios</div>
+    <div class="upload-area" id="uploadArea">
+      <span class="upload-icon">🎙️</span>
+      <div class="upload-title">Toque para selecionar</div>
+      <div class="upload-sub">M4A, MP3, OGG, WAV, MP4 · Até 25MB cada</div>
+    </div>
+    <input type="file" id="fileInput" accept=".m4a,.mp3,.wav,.ogg,.mp4,.webm,.flac" multiple />
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- Step 3: Transcribe -->
+  <div class="card" id="step3">
+    <div class="card-label"><span>3</span> Transcrever</div>
+    <button class="btn-transcribe" id="btnTranscribe" onclick="transcribe()">
+      ✦ Iniciar transcrição
+    </button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-label" id="progressLabel">Preparando...</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+</div>
+
+<div class="toast" id="toast">✓ Copiado!</div>
+
+<script>
+  let files = [];
+
+  // Save/load API key
+  const keyInput = document.getElementById('apiKey');
+  if (localStorage.getItem('groq_key')) keyInput.value = localStorage.getItem('groq_key');
+  keyInput.addEventListener('input', () => {
+    if (keyInput.value.startsWith('gsk_')) localStorage.setItem('groq_key', keyInput.value);
+  });
+
+  // Upload area
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('fileInput');
+
+  uploadArea.addEventListener('click', () => fileInput.click());
+
+  uploadArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    addFiles([...e.dataTransfer.files]);
+  });
+
+  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+  function addFiles(newFiles) {
+    newFiles.forEach(f => {
+      if (!files.find(x => x.name === f.name)) files.push(f);
+    });
+    renderFiles();
+  }
+
+  function renderFiles() {
+    const list = document.getElementById('fileList');
+    list.innerHTML = '';
+    files.forEach((f, i) => {
+      const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : Math.round(f.size/1024)+'KB';
+      list.innerHTML += `
+        <div class="file-item">
+          <span class="file-icon">🎵</span>
+          <span class="file-name">${f.name}</span>
+          <span class="file-size">${size}</span>
+          <button class="file-remove" onclick="removeFile(${i})">✕</button>
+        </div>`;
+    });
+  }
+
+  function removeFile(i) {
+    files.splice(i, 1);
+    renderFiles();
+  }
+
+  async function transcribe() {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) { alert('Cole sua chave da API primeiro.'); return; }
+    if (!files.length) { alert('Selecione pelo menos um áudio.'); return; }
+
+    const btn = document.getElementById('btnTranscribe');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar = document.getElementById('progressBar');
+    const progressLabel = document.getElementById('progressLabel');
+    const resultsDiv = document.getElementById('results');
+
+    btn.disabled = true;
+    progressWrap.classList.add('show');
+    resultsDiv.classList.add('show');
+    resultsDiv.innerHTML = '';
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const pct = Math.round((i / files.length) * 100);
+      progressBar.style.width = pct + '%';
+      progressLabel.textContent = `Transcrevendo "${f.name}"… (${i+1}/${files.length})`;
+
+      const formData = new FormData();
+      formData.append('file', f);
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'pt');
+      formData.append('response_format', 'json');
+
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${key}` },
+          body: formData
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error?.message || `Erro ${res.status}`);
+        }
+
+        const data = await res.json();
+        const text = data.text || '';
+
+        resultsDiv.innerHTML += `
+          <div class="result-item">
+            <div class="result-header">
+              <div class="result-filename">🎙️ ${f.name}</div>
+              <div class="result-actions">
+                <button class="btn-copy" onclick="copyText(this, \`${escapeForAttr(text)}\`)">Copiar</button>
+                <button class="btn-dl" onclick="downloadTxt('${f.name}', \`${escapeForAttr(text)}\`)">⬇ Baixar</button>
+              </div>
+            </div>
+            <div class="result-text">${escapeHtml(text)}</div>
+          </div>`;
+
+      } catch (e) {
+        resultsDiv.innerHTML += `
+          <div class="error-item">
+            ⚠️ <div><strong>${f.name}</strong><br>${e.message}</div>
+          </div>`;
+      }
+    }
+
+    progressBar.style.width = '100%';
+    progressLabel.textContent = '✓ Tudo pronto!';
+    btn.disabled = false;
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escapeForAttr(t) {
+    return t.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$');
+  }
+
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+  }
+
+  function downloadTxt(filename, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'}));
+    a.download = filename.replace(/\.[^.]+$/, '') + '_transcricao.txt';
+    a.click();
+  }
+</script>
+</body>
+</html>
